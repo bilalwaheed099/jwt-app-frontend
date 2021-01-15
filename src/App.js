@@ -1,24 +1,56 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react';
+import { Router, navigate } from '@reach/router';
+
+
+import Login from './components/Login';
+import Register from './components/Register';
+import Content from './components/Content';
+import Protected from './components/Protected';
+import Navigation from './components/Navigation';
+
+export const UserContext = React.createContext([]);
 
 function App() {
+
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState({});
+
+async function logoutCallback() {
+    const result = await fetch('http://localhost:4000/logout', {
+      method: 'POST',
+      credentials: 'include'
+    });
+    //clear user from context
+    setUser({});
+    navigate('/');
+  }
+
+  useEffect( () => {
+    async function checkRefreshToken() {
+      const result = await(await fetch('http://localhost:4000/refresh-token', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      })).json();
+      setUser({ accessToken: result.accessToken});
+      setLoading(false);
+    }
+    checkRefreshToken();
+  }, [])
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <UserContext.Provider value={[user, setUser]}>
+      <div className="App">
+        <Navigation logoutCallback={logoutCallback}/>
+        <Router id="router">
+          <Login path="login" />
+          <Register path="register" />
+          <Protected path="protected" />
+          <Content path="/" />
+        </Router>
+      </div>
+    </UserContext.Provider>
   );
 }
 
